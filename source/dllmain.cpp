@@ -8,6 +8,7 @@
 #include "input.hpp"
 #include "runtime.hpp"
 #include "hook_manager.hpp"
+#include "dllmodule.hpp"
 #include "version.h"
 #include <Windows.h>
 
@@ -44,6 +45,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpvReserved)
 			hooks::register_module(system_path / "opengl32.dll");
 			hooks::register_module(system_path / "user32.dll");
 			hooks::register_module(system_path / "ws2_32.dll");
+			DllModule::LoadModule();
 
 			LOG(INFO) << "Initialized.";
 			break;

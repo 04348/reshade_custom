@@ -5,6 +5,7 @@
 
 #include "log.hpp"
 #include "dxgi_swapchain.hpp"
+#include "dllmodule.hpp"
 #include <algorithm>
 
 // IDXGISwapChain
@@ -207,6 +208,7 @@ HRESULT STDMETHODCALLTYPE DXGISwapChain::Present(UINT SyncInterval, UINT Flags)
 				break;
 			case 11:
 				assert(_runtime != nullptr);
+				if (DllModule::isValid) DllModule::module->on_Present_11(std::static_pointer_cast<reshade::d3d11::d3d11_runtime>(_runtime).get());
 				std::static_pointer_cast<reshade::d3d11::d3d11_runtime>(_runtime)->on_present();
 				break;
 		}

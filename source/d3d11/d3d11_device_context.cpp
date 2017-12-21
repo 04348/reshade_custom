@@ -6,6 +6,7 @@
 #include "log.hpp"
 #include "d3d11_device.hpp"
 #include "d3d11_device_context.hpp"
+#include "dllmodule.hpp"
 
 // ID3D11DeviceContext
 HRESULT STDMETHODCALLTYPE D3D11DeviceContext::QueryInterface(REFIID riid, void **ppvObj)
@@ -148,7 +149,8 @@ void STDMETHODCALLTYPE D3D11DeviceContext::PSSetShaderResources(UINT StartSlot, 
 }
 void STDMETHODCALLTYPE D3D11DeviceContext::PSSetShader(ID3D11PixelShader *pPixelShader, ID3D11ClassInstance *const *ppClassInstances, UINT NumClassInstances)
 {
-	_orig->PSSetShader(pPixelShader, ppClassInstances, NumClassInstances);
+	if (DllModule::isValid) DllModule::module->SetPixelShader_11(_orig, pPixelShader, ppClassInstances, NumClassInstances);
+	else _orig->PSSetShader(pPixelShader, ppClassInstances, NumClassInstances);
 }
 void STDMETHODCALLTYPE D3D11DeviceContext::PSSetSamplers(UINT StartSlot, UINT NumSamplers, ID3D11SamplerState *const *ppSamplers)
 {
@@ -156,7 +158,8 @@ void STDMETHODCALLTYPE D3D11DeviceContext::PSSetSamplers(UINT StartSlot, UINT Nu
 }
 void STDMETHODCALLTYPE D3D11DeviceContext::VSSetShader(ID3D11VertexShader *pVertexShader, ID3D11ClassInstance *const *ppClassInstances, UINT NumClassInstances)
 {
-	_orig->VSSetShader(pVertexShader, ppClassInstances, NumClassInstances);
+	if (DllModule::isValid) DllModule::module->SetVertexShader_11(_orig, pVertexShader, ppClassInstances, NumClassInstances);
+	else _orig->VSSetShader(pVertexShader, ppClassInstances, NumClassInstances);
 }
 void STDMETHODCALLTYPE D3D11DeviceContext::DrawIndexed(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
 {
