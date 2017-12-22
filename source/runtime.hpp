@@ -118,6 +118,8 @@ namespace reshade
 		void set_uniform_value(uniform &variable, const unsigned int *values, size_t count);
 		void set_uniform_value(uniform &variable, const float *values, size_t count);
 
+		bool _show_menu = false;
+
 	protected:
 		/// <summary>
 		/// Callback function called when the runtime is initialized.
@@ -233,7 +235,6 @@ namespace reshade
 		unsigned int _effects_key_data[3];
 		filesystem::path _configuration_path;
 		filesystem::path _screenshot_path;
-		bool _show_menu = false;
 		bool _show_error_log = false;
 		bool _show_clock = false;
 		bool _show_framerate = false;

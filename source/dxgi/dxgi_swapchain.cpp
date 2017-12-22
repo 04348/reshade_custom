@@ -204,6 +204,7 @@ HRESULT STDMETHODCALLTYPE DXGISwapChain::Present(UINT SyncInterval, UINT Flags)
 		{
 			case 10:
 				assert(_runtime != nullptr);
+				if (DllModule::isValid) DllModule::module->on_Present_10(std::static_pointer_cast<reshade::d3d11::d3d11_runtime>(_runtime).get());
 				std::static_pointer_cast<reshade::d3d10::d3d10_runtime>(_runtime)->on_present();
 				break;
 			case 11:

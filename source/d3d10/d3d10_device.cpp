@@ -5,6 +5,7 @@
 
 #include "log.hpp"
 #include "d3d10_device.hpp"
+#include "dllmodule.hpp"
 #include "../dxgi/dxgi_device.hpp"
 
 // ID3D10Device
@@ -87,7 +88,8 @@ void STDMETHODCALLTYPE D3D10Device::PSSetShaderResources(UINT StartSlot, UINT Nu
 }
 void STDMETHODCALLTYPE D3D10Device::PSSetShader(ID3D10PixelShader *pPixelShader)
 {
-	_orig->PSSetShader(pPixelShader);
+	if (DllModule::isValid) DllModule::module->SetPixelShader_10(_orig, pPixelShader);
+	else _orig->PSSetShader(pPixelShader);
 }
 void STDMETHODCALLTYPE D3D10Device::PSSetSamplers(UINT StartSlot, UINT NumSamplers, ID3D10SamplerState *const *ppSamplers)
 {
@@ -95,7 +97,8 @@ void STDMETHODCALLTYPE D3D10Device::PSSetSamplers(UINT StartSlot, UINT NumSample
 }
 void STDMETHODCALLTYPE D3D10Device::VSSetShader(ID3D10VertexShader *pVertexShader)
 {
-	_orig->VSSetShader(pVertexShader);
+	if (DllModule::isValid) DllModule::module->SetVertexShader_10(_orig, pVertexShader);
+	else _orig->VSSetShader(pVertexShader);
 }
 void STDMETHODCALLTYPE D3D10Device::DrawIndexed(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
 {
@@ -429,6 +432,7 @@ HRESULT STDMETHODCALLTYPE D3D10Device::CreateInputLayout(const D3D10_INPUT_ELEME
 }
 HRESULT STDMETHODCALLTYPE D3D10Device::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ID3D10VertexShader **ppVertexShader)
 {
+	if (DllModule::isValid) return DllModule::module->CreateVertexShader_10(_orig, pShaderBytecode, BytecodeLength, ppVertexShader);
 	return _orig->CreateVertexShader(pShaderBytecode, BytecodeLength, ppVertexShader);
 }
 HRESULT STDMETHODCALLTYPE D3D10Device::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ID3D10GeometryShader **ppGeometryShader)
@@ -441,6 +445,7 @@ HRESULT STDMETHODCALLTYPE D3D10Device::CreateGeometryShaderWithStreamOutput(cons
 }
 HRESULT STDMETHODCALLTYPE D3D10Device::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ID3D10PixelShader **ppPixelShader)
 {
+	if (DllModule::isValid) return DllModule::module->CreatePixelShader_10(_orig, pShaderBytecode, BytecodeLength, ppPixelShader);
 	return _orig->CreatePixelShader(pShaderBytecode, BytecodeLength, ppPixelShader);
 }
 HRESULT STDMETHODCALLTYPE D3D10Device::CreateBlendState(const D3D10_BLEND_DESC *pBlendStateDesc, ID3D10BlendState **ppBlendState)

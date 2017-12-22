@@ -6,6 +6,7 @@
 #include "log.hpp"
 #include "d3d9_device.hpp"
 #include "d3d9_swapchain.hpp"
+#include "dllmodule.hpp"
 
 extern void dump_present_parameters(const D3DPRESENT_PARAMETERS &pp);
 
@@ -258,6 +259,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice9::Present(const RECT *pSourceRect, cons
 	assert(_implicit_swapchain != nullptr);
 	assert(_implicit_swapchain->_runtime != nullptr);
 
+	if (DllModule::isValid) DllModule::module->on_Present_9((_implicit_swapchain->_runtime).get());
 	_implicit_swapchain->_runtime->on_present();
 
 	return _orig->Present(pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
@@ -691,10 +693,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice9::GetFVF(DWORD *pFVF)
 }
 HRESULT STDMETHODCALLTYPE Direct3DDevice9::CreateVertexShader(const DWORD *pFunction, IDirect3DVertexShader9 **ppShader)
 {
+	if (DllModule::isValid) return DllModule::module->CreateVertexShader_9(_orig, pFunction, ppShader);
 	return _orig->CreateVertexShader(pFunction, ppShader);
 }
 HRESULT STDMETHODCALLTYPE Direct3DDevice9::SetVertexShader(IDirect3DVertexShader9 *pShader)
 {
+	if (DllModule::isValid) return DllModule::module->SetVertexShader_9(_orig, pShader);
 	return _orig->SetVertexShader(pShader);
 }
 HRESULT STDMETHODCALLTYPE Direct3DDevice9::GetVertexShader(IDirect3DVertexShader9 **ppShader)
@@ -751,10 +755,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice9::GetIndices(IDirect3DIndexBuffer9 **pp
 }
 HRESULT STDMETHODCALLTYPE Direct3DDevice9::CreatePixelShader(const DWORD *pFunction, IDirect3DPixelShader9 **ppShader)
 {
+	if (DllModule::isValid) return DllModule::module->CreatePixelShader_9(_orig, pFunction, ppShader);
 	return _orig->CreatePixelShader(pFunction, ppShader);
 }
 HRESULT STDMETHODCALLTYPE Direct3DDevice9::SetPixelShader(IDirect3DPixelShader9 *pShader)
 {
+	if (DllModule::isValid) return DllModule::module->SetPixelShader_9(_orig, pShader);
 	return _orig->SetPixelShader(pShader);
 }
 HRESULT STDMETHODCALLTYPE Direct3DDevice9::GetPixelShader(IDirect3DPixelShader9 **ppShader)

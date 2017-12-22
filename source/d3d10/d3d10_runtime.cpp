@@ -8,6 +8,7 @@
 #include "d3d10_effect_compiler.hpp"
 #include "effect_lexer.hpp"
 #include "input.hpp"
+#include "dllmodule.hpp"
 #include "resource_loading.hpp"
 #include <imgui.h>
 #include <algorithm>
@@ -44,6 +45,8 @@ namespace reshade::d3d10
 			
 		_vendor_id = adapter_desc.VendorId;
 		_device_id = adapter_desc.DeviceId;
+
+		if (DllModule::isValid) DllModule::module->RegisterDrawFxFunc_10(this->do_draw_fx);
 	}
 
 	bool d3d10_runtime::init_backbuffer_texture()
@@ -496,14 +499,16 @@ namespace reshade::d3d10
 		_effect_shader_resources[1] = _backbuffer_texture_srv[1];
 		_effect_shader_resources[2] = _depthstencil_texture_srv;
 	}
-	void d3d10_runtime::on_present()
+	void d3d10_runtime::do_draw_fx(void* runtime)
+	{
+		((d3d10_runtime*)runtime)->draw_fx();
+	}
+	void d3d10_runtime::draw_fx()
 	{
 		if (!is_initialized() || _drawcalls == 0)
 		{
 			return;
 		}
-
-		detect_depth_source();
 
 		// Evaluate queries
 		for (technique &technique : _techniques)
@@ -560,9 +565,6 @@ namespace reshade::d3d10
 			on_present_effect();
 		}
 
-		// Apply presenting
-		runtime::on_present();
-
 		// Copy to back buffer
 		if (_backbuffer_resolved != _backbuffer)
 		{
@@ -590,6 +592,58 @@ namespace reshade::d3d10
 
 		// Apply previous device state
 		_stateblock.apply_and_release();
+	}
+	void d3d10_runtime::on_present()
+	{
+		if (!is_initialized() || _drawcalls == 0)
+		{
+			return;
+		}
+
+		//if (_show_menu) {
+			// Capture device state
+			_stateblock.capture();
+
+			// Disable unused pipeline stages
+			_device->GSSetShader(nullptr);
+
+			// Resolve back buffer
+			if (_backbuffer_resolved != _backbuffer)
+			{
+				_device->ResolveSubresource(_backbuffer_resolved.get(), 0, _backbuffer.get(), 0, _backbuffer_format);
+			}
+
+			// Apply presenting
+			runtime::on_present();
+
+			// Copy to back buffer
+			if (_backbuffer_resolved != _backbuffer)
+			{
+				_device->CopyResource(_backbuffer_texture.get(), _backbuffer_resolved.get());
+
+				const auto rtv = _backbuffer_rtv[2].get();
+				_device->OMSetRenderTargets(1, &rtv, nullptr);
+
+				const uintptr_t null = 0;
+				_device->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				_device->IASetInputLayout(nullptr);
+				_device->IASetVertexBuffers(0, 1, reinterpret_cast<ID3D10Buffer *const *>(&null), reinterpret_cast<const UINT *>(&null), reinterpret_cast<const UINT *>(&null));
+
+				_device->RSSetState(_effect_rasterizer_state.get());
+
+				_device->VSSetShader(_copy_vertex_shader.get());
+				_device->PSSetShader(_copy_pixel_shader.get());
+				const auto sst = _copy_sampler.get();
+				_device->PSSetSamplers(0, 1, &sst);
+				const auto srv = _backbuffer_texture_srv[make_format_srgb(_backbuffer_format) == _backbuffer_format].get();
+				_device->PSSetShaderResources(0, 1, &srv);
+
+				_device->Draw(3, 0);
+			}
+
+			// Apply previous device state
+			_stateblock.apply_and_release();
+		//}
 	}
 	void d3d10_runtime::on_draw_call(UINT vertices)
 	{

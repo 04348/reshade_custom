@@ -8,6 +8,7 @@
 #include "d3d9_effect_compiler.hpp"
 #include "effect_lexer.hpp"
 #include "input.hpp"
+#include "dllmodule.hpp"
 #include <imgui.h>
 #include <algorithm>
 
@@ -40,6 +41,8 @@ namespace reshade::d3d9
 		_behavior_flags = creation_params.BehaviorFlags;
 		_num_samplers = caps.MaxSimultaneousTextures;
 		_num_simultaneous_rendertargets = std::min(caps.NumSimultaneousRTs, DWORD(8));
+
+		if (DllModule::isValid) DllModule::module->RegisterDrawFxFunc_9(this->do_draw_fx);
 	}
 
 	bool d3d9_runtime::init_backbuffer_texture()
@@ -239,21 +242,12 @@ namespace reshade::d3d9
 
 		_depth_source_table.clear();
 	}
-	void d3d9_runtime::on_present()
+	void d3d9_runtime::do_draw_fx(void* runtime)
 	{
-		if (!is_initialized())
-		{
-			return;
-		}
-
-		detect_depth_source();
-
-		// Begin post processing
-		if (FAILED(_device->BeginScene()))
-		{
-			return;
-		}
-
+		((d3d9_runtime*)runtime)->draw_fx();
+	}
+	void d3d9_runtime::draw_fx()
+	{
 		// Capture device state
 		_stateblock->Capture();
 
@@ -296,9 +290,6 @@ namespace reshade::d3d9
 			on_present_effect();
 		}
 
-		// Apply presenting
-		runtime::on_present();
-
 		// Copy to back buffer
 		if (_backbuffer_resolved != _backbuffer)
 		{
@@ -321,9 +312,79 @@ namespace reshade::d3d9
 		{
 			_device->SetSoftwareVertexProcessing(software_rendering_enabled);
 		}
+	}
+	void d3d9_runtime::on_present()
+	{
+		if (!is_initialized())
+		{
+			return;
+		}
 
-		// End post processing
-		_device->EndScene();
+		// Begin post processing
+		if (FAILED(_device->BeginScene()))
+		{
+			return;
+		}
+
+		//if (_show_menu) {
+			// Capture device state
+			_stateblock->Capture();
+
+			BOOL software_rendering_enabled;
+			D3DVIEWPORT9 viewport;
+			com_ptr<IDirect3DSurface9> stateblock_rendertargets[8], stateblock_depthstencil;
+
+			_device->GetViewport(&viewport);
+
+			for (DWORD target = 0; target < _num_simultaneous_rendertargets; target++)
+			{
+				_device->GetRenderTarget(target, &stateblock_rendertargets[target]);
+			}
+
+			_device->GetDepthStencilSurface(&stateblock_depthstencil);
+
+			if ((_behavior_flags & D3DCREATE_MIXED_VERTEXPROCESSING) != 0)
+			{
+				software_rendering_enabled = _device->GetSoftwareVertexProcessing();
+
+				_device->SetSoftwareVertexProcessing(FALSE);
+			}
+
+			// Resolve back buffer
+			if (_backbuffer_resolved != _backbuffer)
+			{
+				_device->StretchRect(_backbuffer.get(), nullptr, _backbuffer_resolved.get(), nullptr, D3DTEXF_NONE);
+			}
+
+			// Apply presenting
+			runtime::on_present();
+
+			// Copy to back buffer
+			if (_backbuffer_resolved != _backbuffer)
+			{
+				_device->StretchRect(_backbuffer_resolved.get(), nullptr, _backbuffer.get(), nullptr, D3DTEXF_NONE);
+			}
+
+			// Apply previous device state
+			_stateblock->Apply();
+
+			for (DWORD target = 0; target < _num_simultaneous_rendertargets; target++)
+			{
+				_device->SetRenderTarget(target, stateblock_rendertargets[target].get());
+			}
+
+			_device->SetDepthStencilSurface(stateblock_depthstencil.get());
+
+			_device->SetViewport(&viewport);
+
+			if ((_behavior_flags & D3DCREATE_MIXED_VERTEXPROCESSING) != 0)
+			{
+				_device->SetSoftwareVertexProcessing(software_rendering_enabled);
+			}
+
+			// End post processing
+			_device->EndScene();
+		//}
 	}
 	void d3d9_runtime::on_draw_call(D3DPRIMITIVETYPE type, UINT vertices)
 	{
